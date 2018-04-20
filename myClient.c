@@ -7,27 +7,22 @@
 #include <arpa/inet.h>
 
 
-
-/*Structure for a datagram*/
-typedef struct packet{
-    int packetKind; // 0 -Ack, 1- Data
-    int seqNumber; //
-    int ack;
-    char data[100];
-}Packet;
+#include "sendlib.c"
 
 
 
-void main(int argc, char *argv[]){
+
+
+int main(int argc, char *argv[]){
     char     *szAddress;             /*  Holds remote IP address   */
     char     *szPort;                /*  Holds remote port         */
     char     *filePath;              /*  Holds file path           */
     char     *toFormat;              /*  Holds target file format  */
     char     *toName;   
-    char     *lossProbab;
-    char     *randomSeed;
+    char     *lossProbabChar;
+    char     *randomSeedChar;
 
-    if(argc != 7){
+    if(argc != 8){
         printf("\nCommand Line Arguments not complete\n");
         exit(EXIT_FAILURE);
         return -1;
@@ -42,29 +37,39 @@ void main(int argc, char *argv[]){
     randomSeedChar = argv[7];
 
     int port = atoi(argv[1]);
-    int lossProbability = atoi(lossProbabChar);
+    double lossProbab = atof(lossProbabChar);
     int randomSeed = atoi(randomSeedChar);
 
     int sockfd;
     struct sockaddr_in serverAddr;
-    char buffer[1024];
-    socklen_t addr_size;
 
-    sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        perror("cannot create socket");
+        return 0;
+    }
+
     memset(&serverAddr, '\0', sizeof(serverAddr));
 
     serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = htonl(szAddress);    
     serverAddr.sin_port = htons(port);
-    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    // if (bind(sockfd, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0) {
+    //     perror("bind failed");
+    //     return 0;
+    // }
 
 
-
-    int fileLen;
+    int fileLen, len;
+    int sent=0;
+    char msg[PAYLOAD];
     FILE *filePtr;
     filePtr = fopen(filePath, "rb");
     if (filePtr==NULL){
         printf("Error opening file!");
         exit(1);
+        goto END;
     }
   
     //Get the length of file
@@ -74,35 +79,32 @@ void main(int argc, char *argv[]){
     fseek(filePtr, 0, SEEK_SET);
 
 
+    printf("checking for the segfault.......");
 
-    //make packets to send 
-    int packetId = 0;
-    Packet sendPacket;
-    Packet recvPacket;
-    int ackRcv = 1;
+    memset(msg, '\0', PAYLOAD);
+    sprintf(msg, "%d", fileLen);
+    rdt_send(sockfd, msg, sizeof(msg), lossProbab, randomSeed, serverAddr);
+    //sendto(sockfd, msg, sizeof(msg), 0,(const struct sockaddr *)&serverAddr, sizeof(serverAddr));  
 
-
-
-    while(1){
-
-        if (ackRcv ==1){
-            sendPacket.seqNumber = packetId;
-            sendPacket.packetKind = 1; /* 0 -Ack, 1- Data */
-            sendPacket.data = 
-
-            lossy_sendto(sockfd, )
-        }
-
+    printf("Checking for the timeout.........");
+    memset(msg, '\0', PAYLOAD);
+    while (sent < fileLen) {
+    	if ((fileLen-sent) < PAYLOAD)
+    		len = fread(msg, sizeof(char), fileLen-sent, filePtr);
+    	else
+            len = fread(msg, sizeof(char), PAYLOAD, filePtr);
+            printf("The length of 1st client packet sent is %d\n", len);
+    	rdt_send(sockfd, msg, len, lossProbab, randomSeed, serverAddr);
+    	sent += len;
     }
-
-
-
-    //strcpy(buffer, "Hello Server\n");
-    //sendto(sockfd, buffer, 1024, 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-    //printf("[+]Data Send: %s", buffer);
-
-}
-
-void makePacket(){
+    
+END:    
+    // close the file
+    fclose(filePtr);
+    // close the rdt socket
+    rdt_close(sockfd,lossProbab, randomSeed, serverAddr);
+	printf("Client program terminated\n");
+    return 0;
 
 }
+
