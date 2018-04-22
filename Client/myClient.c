@@ -74,7 +74,7 @@ int main(int argc, char *argv[]){
 //          perror("bind failed");
 //        return 0;
 //     }
-
+    socklen_t addr_size = sizeof(serverAddr);
     int fileLen, len;
     //nt sent=0;
     char msg[PAYLOAD_SIZE];
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]){
         int test;
         test = lossy_sendto(lossProbab, randomSeed, sockfd, send_pack, len, (struct sockaddr *)&serverAddr, sizeof(serverAddr)); 
         //test = sendto(sockfd, send_pack, len, 0, (struct sockaddr *)&serverAddr, sizeof(serverAddr)); 
-        printf("WERRRROOROROROROROORRORORO: %d\n", test);
+        //printf("WERRRROOROROROROROORRORORO: %d\n", test);
         if (test < 0) {
             perror("Error sending the the packet\n");
             exit(4);
@@ -169,7 +169,7 @@ int main(int argc, char *argv[]){
             continue;
         }
 
-        socklen_t addr_size = sizeof(serverAddr);
+        
          /*  RECIEVING THE ACK */
          int n = 0;
          if ((n = recvfrom(sockfd, &curr_ack, 1, 0, (struct sockaddr *)&serverAddr, &addr_size)) < 0) 
@@ -192,6 +192,20 @@ int main(int argc, char *argv[]){
          free(send_pack);
          
      }
+     char confirm_ack;
+     int p;
+     if ((p = recvfrom(sockfd, &confirm_ack, 1, 0, (struct sockaddr *)&serverAddr, &addr_size)) <0){
+        perror("error receiving confirmation ACK");
+        exit(4);
+     }
+
+     if (confirm_ack == 'S'){
+         printf("Sucessfully translated and saved in server\n");
+     }
+     else if(confirm_ack == 'F'){
+         printf("Format Error\n");
+     }
+
      fclose(filePtr);
      return 0;
 

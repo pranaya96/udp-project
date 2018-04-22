@@ -31,7 +31,7 @@ int main(int argc, char  *argv[]){
         return -1;
     }
 
-    printf("2sHey this is server\n");
+    printf("Hey this is server\n");
 
     szPort = argv[1];
     lossProbabChar = argv[2];
@@ -79,6 +79,8 @@ int main(int argc, char  *argv[]){
     unsigned char* data_recv = (unsigned char*) malloc(10);
     unsigned char* recv_ptr = data_recv;
 
+    int sucessInt=0;
+    char sucessMessage;
 
 
     int r;
@@ -88,8 +90,6 @@ int main(int argc, char  *argv[]){
     //     printf("The value is %c\n", recv_buffer[0]);
 
     // }
-
-
     while (packet_identifier != 'l'){
         //printf("-----------------The program went here--------------\n");
         // if ((r = recvfrom(sockfd, recv_buffer, PAYLOAD_SIZE+HEADER_SIZE, 0, (struct sockaddr *)&my_addr, &addr_size) < 0)){
@@ -97,7 +97,7 @@ int main(int argc, char  *argv[]){
 
         // }
         if ((r = recvfrom(sockfd, recv_buffer, PAYLOAD_SIZE+HEADER_SIZE, 0, (struct sockaddr *)&my_addr,&addr_size) > 0)) {
-            printf("-----------------The program went here--------------\n");
+            //printf("-----------------The program went here--------------\n");
              memcpy(&seq_num, recv_buffer, 1);
              printf("Packet with sequence number %c is received \n", seq_num);
              if (curr_seq_no == seq_num) {
@@ -105,7 +105,7 @@ int main(int argc, char  *argv[]){
                  printf("PacketIDentifier %c recieved\n", packet_identifier);
                  if (packet_identifier == 'h') {
                     recv_buffer[PAYLOAD_SIZE+HEADER_SIZE-1] = '\0';
-                    printf("Buffer is received %s\n", recv_buffer);
+                    //printf("Buffer is received %s\n", recv_buffer);
                     memcpy(&targetType, recv_buffer+6, 1);
                     memcpy(&targetFileNameLength, recv_buffer+7, 4);
                     targetFileName = (char*) malloc (targetFileNameLength);
@@ -120,16 +120,16 @@ int main(int argc, char  *argv[]){
                      recv_ptr = data_recv+offset;
                      memcpy(recv_ptr, recv_buffer+6, data_size);
                  }
-                 printf("Val of data size: %d\n", data_size);
+                 //printf("Val of data size: %d\n", data_size);
                  offset += data_size;
-                 printf("changing seq no of data\n");
+                 //printf("changing seq no of data\n");
                  if (curr_seq_no == '0'){
                      curr_seq_no = '1';
                  }else{
                      curr_seq_no = '0';
                  }
         }
-        printf("sending ack corrsponding to seq num\n");
+        //printf("sending ack corrsponding to seq num\n");
         int m;
         m = lossy_sendto(lossProbab, randomSeed, sockfd, &seq_num, 1, (struct sockaddr *)&my_addr, sizeof(my_addr));
         if(m < 0) 
@@ -141,7 +141,7 @@ int main(int argc, char  *argv[]){
 
     }
     
-    printf("Total data size: %d\n", offset);
+    //printf("Total data size: %d\n", offset);
 
     }
    
@@ -154,7 +154,7 @@ int main(int argc, char  *argv[]){
     int written;
     written = offset-4;
     char tempBuffer[written];
-    printf("Fine until memcpy\n");
+    //printf("Fine until memcpy\n");
     memcpy(tempBuffer,data_recv+4,written);
     printf("The total length written is%d\n", written);
     
@@ -164,7 +164,21 @@ int main(int argc, char  *argv[]){
         printf("Error opening file!");
         exit(1);
     }
-   
+    //printf("Programme reached till before string comparision\n");
+    
+    char targetTypeInServer[2];
+    memcpy(targetTypeInServer,&targetType,1);
+    printf("---------------");
+    targetTypeInServer[1] = '\0';
+    //printf("The target the type in surebver is%s\n", targetTypeInServer);
+    
+    if (strstr("0123", targetTypeInServer) == NULL) {
+        printf("Format Type not correct\n");
+        sucessInt = -1; // invalid formatType can't save
+        goto BREAKPOINT;
+        //exit(EXIT_FAILURE);
+    }
+    
     int pointerPosition;
     pointerPosition = 0;
     //printf("Fine until while loop \n");
@@ -175,7 +189,24 @@ int main(int argc, char  *argv[]){
         if (tempBuffer[pointerPosition]== 1){
             pointerPosition = readTypeOne(tempBuffer, pointerPosition, newFilePtr, &targetType);
         }
+        if (tempBuffer[pointerPosition] != 0 && tempBuffer[pointerPosition] != 1){
+            sucessInt = -1;
+            //goto BREAKPOINT;
+            
+            break;
+         } 
     }
+
+    BREAKPOINT: 
+             
+    if (sucessInt == -1) {
+        sucessMessage = 'F';
+    }else if (sucessInt == 0){
+        sucessMessage = 'S';
+    }
+    
+    printf("THe final message is:%c\n",sucessMessage);
+    sendto(sockfd, &sucessMessage, 1, 0,(struct sockaddr *)&my_addr, sizeof(my_addr));
 
     fclose(newFilePtr);
 
@@ -188,7 +219,7 @@ int main(int argc, char  *argv[]){
     //      perror("Closing connection");
     //      exit(4);
     //     }
-
+    
     return 0;
 }
 
