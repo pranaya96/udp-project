@@ -205,7 +205,7 @@ int main(int argc, char  *argv[]){
         sucessMessage = 'S';
     }
     
-    printf("THe final message is:%c\n",sucessMessage);
+    printf("The final message is:%c\n",sucessMessage);
     sendto(sockfd, &sucessMessage, 1, 0,(struct sockaddr *)&my_addr, sizeof(my_addr));
 
     fclose(newFilePtr);
